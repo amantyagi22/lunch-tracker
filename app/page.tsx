@@ -32,8 +32,8 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="max-w-3xl mx-auto pt-8 pb-16 px-4 sm:px-6">
-        <div className="space-y-6">
+      <main className="w-full max-w-xl mx-auto pt-4 pb-8 px-4">
+        <div className="space-y-4">
           <ResponseForm />
 
           {/* Admin panel is conditionally rendered based on user.isAdmin */}

@@ -2,16 +2,18 @@
 
 import React, { useState } from "react";
 import { useLunch } from "../contexts/LunchContext";
-import { format } from "date-fns";
-import { Timestamp } from "firebase/firestore";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function ResponseForm() {
   const { dailyLunch, userResponse, loading, submitResponse } = useLunch();
   const [setAsDefault, setSetAsDefault] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin;
 
   // Check if current time is past cutoff
   const isPastCutoff = () => {
     if (!dailyLunch) return false;
+    if (isAdmin) return false; // Admins can bypass cutoff time
 
     const now = new Date();
     const [hours, minutes] = dailyLunch.cutoffTime.split(":").map(Number);
@@ -24,6 +26,10 @@ export default function ResponseForm() {
   const handleResponse = async (response: "yes" | "no") => {
     await submitResponse(response, setAsDefault);
     setSetAsDefault(false);
+  };
+
+  const handleToggleDefault = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSetAsDefault(e.target.checked);
   };
 
   if (!dailyLunch) {
@@ -57,7 +63,7 @@ export default function ResponseForm() {
   }
 
   const pastCutoff = isPastCutoff();
-  if (pastCutoff) {
+  if (pastCutoff && !isAdmin) {
     return (
       <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
         <div className="text-center text-gray-600">
@@ -87,88 +93,141 @@ export default function ResponseForm() {
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-      <div className="text-center mb-4">
-        <h2 className="text-lg font-medium text-gray-900">
+    <div className="bg-white p-6 sm:p-8 rounded-lg border border-gray-200 shadow-sm">
+      <div className="text-center mb-5 sm:mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-3">
           {userResponse ? "Your lunch response" : "Will you eat lunch today?"}
         </h2>
         {userResponse ? (
-          <p className="mt-2 text-sm">
-            <span className="font-medium">Current response: </span>
+          <div className="mt-2 sm:mt-3">
+            <span className="text-black font-medium">Current response: </span>
             <span
               className={
                 userResponse.response === "yes"
-                  ? "text-green-600 font-medium"
-                  : "text-red-600 font-medium"
+                  ? "text-emerald-700 font-semibold"
+                  : "text-rose-700 font-semibold"
               }
             >
               {userResponse.response === "yes" ? "Yes" : "No"}
             </span>
-            <span className="block text-xs text-gray-500 mt-1">
-              You can change your response until {dailyLunch.cutoffTime}
-            </span>
-          </p>
+          </div>
         ) : (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-700">
             Please respond by {dailyLunch.cutoffTime}
           </p>
         )}
+        {!isAdmin && (
+          <div className="text-sm text-gray-700 font-medium mt-3 border border-gray-200 rounded-md p-3 bg-gray-50 inline-block mx-auto">
+            <span className="text-black">Cutoff time:</span>{" "}
+            {dailyLunch.cutoffTime}
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div
+        className={
+          isAdmin
+            ? "grid grid-cols-2 gap-4 sm:gap-5 mb-5 sm:mb-6 max-w-md mx-auto"
+            : "grid grid-cols-1 gap-4 sm:gap-5 mb-5 sm:mb-6 max-w-xs mx-auto"
+        }
+      >
         <button
           onClick={() => handleResponse("yes")}
           disabled={loading}
-          className={`py-3 px-4 rounded-md text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
-            userResponse?.response === "yes"
-              ? "bg-green-600 hover:bg-green-700 ring-2 ring-green-500 ring-offset-2"
-              : "bg-green-500 hover:bg-green-600"
-          }`}
+          className={`
+            relative py-4 sm:py-5 px-3 sm:px-5 rounded-lg 
+            text-lg font-medium transition-all duration-200 
+            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-400
+            ${
+              userResponse?.response === "yes"
+                ? "bg-emerald-800 text-white border-2 border-emerald-900 shadow-md"
+                : "bg-emerald-700 text-white border border-emerald-800 hover:bg-emerald-800"
+            }
+          `}
         >
-          {userResponse?.response === "yes" ? "Yes ✓" : "Yes"}
+          {userResponse?.response === "yes" ? (
+            <>
+              <span className="flex items-center justify-center">
+                Yes
+                <span className="absolute right-3 flex items-center justify-center h-6 w-6 bg-white text-emerald-800 rounded-full text-xs">
+                  ✓
+                </span>
+              </span>
+            </>
+          ) : (
+            "Yes"
+          )}
         </button>
 
         <button
           onClick={() => handleResponse("no")}
           disabled={loading}
-          className={`py-3 px-4 rounded-md text-white font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${
-            userResponse?.response === "no"
-              ? "bg-red-600 hover:bg-red-700 ring-2 ring-red-500 ring-offset-2"
-              : "bg-red-500 hover:bg-red-600"
-          }`}
+          className={`
+            relative py-4 sm:py-5 px-3 sm:px-5 rounded-lg 
+            text-lg font-medium transition-all duration-200
+            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-400
+            ${
+              userResponse?.response === "no"
+                ? "bg-rose-800 text-white border-2 border-rose-900 shadow-md"
+                : "bg-rose-700 text-white border border-rose-800 hover:bg-rose-800"
+            }
+          `}
         >
-          {userResponse?.response === "no" ? "No ✓" : "No"}
+          {userResponse?.response === "no" ? (
+            <>
+              <span className="flex items-center justify-center">
+                No
+                <span className="absolute right-3 flex items-center justify-center h-6 w-6 bg-white text-rose-800 rounded-full text-xs">
+                  ✓
+                </span>
+              </span>
+            </>
+          ) : (
+            "No"
+          )}
         </button>
       </div>
 
-      <div className="flex items-center justify-center">
-        <input
-          id="default-checkbox"
-          type="checkbox"
-          checked={setAsDefault}
-          onChange={(e) => setSetAsDefault(e.target.checked)}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-        />
-        <label
-          htmlFor="default-checkbox"
-          className="ml-2 text-sm text-gray-600"
-        >
-          Make this my default response
-        </label>
-      </div>
+      <div className="flex flex-col items-center justify-center bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200 max-w-md mx-auto mt-2">
+        <div className="flex items-center justify-between w-full mb-3">
+          <div className="flex items-center">
+            <label
+              htmlFor="default-toggle"
+              className="text-sm font-medium text-gray-800 cursor-pointer"
+            >
+              Make this my default response
+            </label>
+          </div>
 
-      {userResponse && (
-        <div className="mt-4 text-center text-xs text-gray-500">
-          Last updated:{" "}
-          {format(
-            userResponse.updatedAt instanceof Date
-              ? userResponse.updatedAt
-              : (userResponse.updatedAt as unknown as Timestamp)?.toDate?.() ||
-                  new Date(),
-            "h:mm a"
-          )}
+          <div className="relative">
+            <input
+              type="checkbox"
+              id="default-toggle"
+              className="sr-only peer"
+              checked={setAsDefault}
+              onChange={handleToggleDefault}
+            />
+            <div
+              onClick={() => setSetAsDefault(!setAsDefault)}
+              className="w-14 h-7 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-300 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:shadow-sm after:transition-all peer-checked:bg-indigo-600 cursor-pointer"
+            ></div>
+          </div>
         </div>
-      )}
+
+        <div className="w-full flex items-center justify-center text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+          <div className="flex items-center">
+            <div className="relative mr-2">
+              <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 text-indigo-700 w-5 h-5 text-xs font-medium cursor-pointer hover:bg-indigo-200 transition-colors">
+                ?
+                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-44 p-2 bg-white text-xs text-gray-700 rounded-md shadow-lg opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none border border-gray-200 z-10">
+                  This will be your automatic response for future days.
+                </span>
+              </span>
+            </div>
+            <p>Applies your choice automatically each day.</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
