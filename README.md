@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lunch Tracker
 
-## Getting Started
+A simple web application for tracking lunch preferences in an office setting.
 
-First, run the development server:
+## Features
+
+- **Google OAuth Authentication**: One-click sign in
+- **Simple User Interface**: Easily respond "Yes" or "No" to daily lunch
+- **Default Preferences**: Set your common lunch preference to minimize daily input
+- **Admin Panel**: For the office manager to track attendance and manage lunch availability
+- **Mobile-Friendly**: Works well on all devices
+
+## Tech Stack
+
+- **Frontend**: React.js with Next.js, Tailwind CSS
+- **Backend**: Firebase (Authentication & Firestore Database)
+- **Hosting**: Vercel (recommended)
+
+## Setup Instructions
+
+1. **Clone the repository**
+
+```bash
+git clone <repository-url>
+cd lunch-tracker
+```
+
+2. **Install dependencies**
+
+```bash
+npm install
+```
+
+3. **Create a Firebase project**
+
+- Go to [Firebase Console](https://console.firebase.google.com/)
+- Create a new project
+- Set up Authentication with Google provider
+- Create a Firestore database
+
+4. **Configure environment variables**
+
+Create a `.env.local` file in the project root with your Firebase configuration:
+
+```
+NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your-measurement-id
+```
+
+5. **Run the development server**
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+6. **Open [http://localhost:3000](http://localhost:3000) with your browser**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setting Admin Privileges
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+By default, all users are created with `isAdmin: false`. To make a user an admin (Jakir):
 
-## Learn More
+1. Sign in as the user you want to make an admin
+2. Go to Firebase Console > Firestore Database
+3. Find the user document in the "users" collection
+4. Update the `isAdmin` field to `true`
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The easiest way to deploy this application is using Vercel:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Push your code to a GitHub repository
+2. Import the project to Vercel
+3. Configure the environment variables
+4. Deploy
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT

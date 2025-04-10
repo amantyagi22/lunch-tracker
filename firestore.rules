@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection rules
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // DailyLunch collection rules
+    match /dailyLunch/{date} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Responses collection rules
+    match /responses/{responseId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}
