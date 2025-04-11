@@ -2,11 +2,28 @@
 
 import { useState, useEffect } from "react";
 
-// Default subreddit if the environment variable is not set
-const DEFAULT_SUBREDDIT = "aww"; // Extra safe default in case env variables fail
-// Get subreddit from environment variable or use default
-const MEME_SUBREDDIT =
-  process.env.NEXT_PUBLIC_MEME_SUBREDDIT || DEFAULT_SUBREDDIT;
+// Default subreddits if the environment variable is not set
+const DEFAULT_SUBREDDITS = ["aww", "wholesomememes", "foodmemes"];
+
+// Get subreddits from environment variable or use defaults
+const getMemeSubreddits = (): string[] => {
+  const envSubreddits = process.env.NEXT_PUBLIC_MEME_SUBREDDITS;
+
+  if (!envSubreddits) return DEFAULT_SUBREDDITS;
+
+  // Split by commas and trim whitespace
+  return envSubreddits
+    .split(",")
+    .map((sub) => sub.trim())
+    .filter((sub) => sub.length > 0);
+};
+
+// Get a random subreddit from the list
+const getRandomSubreddit = (): string => {
+  const subreddits = getMemeSubreddits();
+  const randomIndex = Math.floor(Math.random() * subreddits.length);
+  return subreddits[randomIndex];
+};
 
 interface Meme {
   postLink: string;
@@ -14,6 +31,7 @@ interface Meme {
   url: string;
   nsfw: boolean;
   spoiler: boolean;
+  subreddit?: string;
 }
 
 // Fallback meme in case API fails
@@ -21,6 +39,7 @@ const fallbackMeme = {
   title: "Lunch Time!",
   url: "https://i.imgur.com/QohGX1D.jpg", // A safe, food-related image
   postLink: "https://imgur.com/QohGX1D",
+  subreddit: "food",
 };
 
 // Simple profanity filter for meme titles
@@ -103,11 +122,18 @@ export default function MemeSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [useFallback, setUseFallback] = useState(false);
+  const [currentSubreddit, setCurrentSubreddit] = useState<string>(
+    getRandomSubreddit()
+  );
 
   const fetchMeme = async () => {
     setLoading(true);
     setError(null);
     setUseFallback(false);
+
+    // Get a new random subreddit each time
+    const subreddit = getRandomSubreddit();
+    setCurrentSubreddit(subreddit);
 
     try {
       // Try up to 5 times to get a safe meme
@@ -122,7 +148,7 @@ export default function MemeSection() {
           const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
           const response = await fetch(
-            `https://meme-api.com/gimme/${MEME_SUBREDDIT}`,
+            `https://meme-api.com/gimme/${subreddit}`,
             {
               signal: controller.signal,
             }
@@ -135,6 +161,7 @@ export default function MemeSection() {
           }
 
           const data: Meme = await response.json();
+          data.subreddit = subreddit; // Store which subreddit it came from
 
           // Skip NSFW memes or those with profanity in title
           if (data.nsfw || containsProfanity(data.title)) {
@@ -250,7 +277,7 @@ export default function MemeSection() {
               </div>
             )}
             <div className="text-right text-xs text-gray-500">
-              From r/{MEME_SUBREDDIT}
+              From r/{meme.subreddit || currentSubreddit}
             </div>
           </div>
         ) : (
