@@ -21,7 +21,7 @@ import {
 import { format } from "date-fns";
 import { db } from "../lib/firebase";
 import { useAuth } from "./AuthContext";
-import { DailyLunch, LunchContextData, Response } from "../types";
+import { DailyLunch, LunchContextData, Response, User } from "../types";
 
 // Create lunch context
 const LunchContext = createContext<LunchContextData>({
@@ -32,6 +32,8 @@ const LunchContext = createContext<LunchContextData>({
   userCount: { yes: 0, no: 0, unanswered: 0 },
   submitResponse: async () => {},
   toggleLunchAvailability: async () => {},
+  toggleLateResponses: async () => {},
+  submitBulkResponses: async () => {},
 });
 
 // Format date to YYYY-MM-DD
@@ -69,6 +71,7 @@ export function LunchProvider({ children }: { children: ReactNode }) {
             date: today,
             available: true,
             cutoffTime: "12:30",
+            allowLateResponses: false, // By default, don't allow late responses
             createdAt: new Date(),
           };
 
@@ -79,7 +82,13 @@ export function LunchProvider({ children }: { children: ReactNode }) {
 
           setDailyLunch(newLunch);
         } else if (lunchSnap.exists()) {
-          setDailyLunch(lunchSnap.data() as DailyLunch);
+          const lunchData = lunchSnap.data();
+          // Ensure allowLateResponses is initialized if it doesn't exist
+          if (lunchData.allowLateResponses === undefined) {
+            await updateDoc(lunchRef, { allowLateResponses: false });
+            lunchData.allowLateResponses = false;
+          }
+          setDailyLunch(lunchData as DailyLunch);
         }
 
         // Get all users for later reference
@@ -91,7 +100,7 @@ export function LunchProvider({ children }: { children: ReactNode }) {
         usersSnap.forEach((doc) => {
           const userData = doc.data();
           if (userData.userId) {
-            userMap.set(userData.userId, userData.name);
+            userMap.set(userData.userId, userData.name || "Unknown User");
           }
         });
 
@@ -102,13 +111,13 @@ export function LunchProvider({ children }: { children: ReactNode }) {
 
           if (responseSnap.exists()) {
             setUserResponse(responseSnap.data() as Response);
-          } else if (user.defaultResponse && dayOfWeek > 0 && dayOfWeek < 6) {
-            // If user has a default preference and hasn't responded yet
+          } else if (dayOfWeek > 0 && dayOfWeek < 6) {
+            // If user hasn't responded yet, use default or "no"
             const defaultResponse: Response = {
               userId: user.userId,
               userName: user.name,
               date: today,
-              response: user.defaultResponse,
+              response: user.defaultResponse || "no", // Use default or "no" if no default
               createdAt: new Date(),
               updatedAt: new Date(),
             };
@@ -287,6 +296,139 @@ export function LunchProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Toggle allowing late responses (admin only)
+  const toggleLateResponses = async (allowLate: boolean) => {
+    if (!user?.isAdmin || !dailyLunch) return;
+
+    setLoading(true);
+    try {
+      const today = formatDate(new Date());
+      const lunchRef = doc(db, "dailyLunch", today);
+
+      await updateDoc(lunchRef, {
+        allowLateResponses: allowLate,
+      });
+
+      setDailyLunch({
+        ...dailyLunch,
+        allowLateResponses: allowLate,
+      });
+    } catch (error) {
+      console.error("Error toggling late responses:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Convert all unanswered users to a specific response by setting their default
+  const submitBulkResponses = async (response: "yes" | "no") => {
+    if (!user?.isAdmin || !dailyLunch) return;
+
+    setLoading(true);
+    try {
+      const today = formatDate(new Date());
+
+      // Get all users
+      const usersRef = collection(db, "users");
+      const usersSnap = await getDocs(usersRef);
+      const users: User[] = [];
+
+      usersSnap.forEach((doc) => {
+        const userData = doc.data();
+        if (userData.userId) {
+          users.push(userData as User);
+        }
+      });
+
+      // Get current responses
+      const currentResponsesMap = new Map();
+      responses.forEach((resp) => {
+        currentResponsesMap.set(resp.userId, resp);
+      });
+
+      // Find users who haven't responded
+      const unansweredUsers = users.filter(
+        (user) => !currentResponsesMap.has(user.userId)
+      );
+
+      // Update default responses for all unanswered users
+      const batch = [];
+
+      for (const unansweredUser of unansweredUsers) {
+        // Update user default
+        const userRef = doc(db, "users", unansweredUser.userId);
+        batch.push(
+          updateDoc(userRef, {
+            defaultResponse: response,
+          })
+        );
+
+        // Create response for today
+        const responseRef = doc(
+          db,
+          "responses",
+          `${unansweredUser.userId}_${today}`
+        );
+
+        const responseData: Response = {
+          userId: unansweredUser.userId,
+          userName: unansweredUser.name,
+          date: today,
+          response,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        batch.push(
+          setDoc(responseRef, {
+            ...responseData,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          })
+        );
+      }
+
+      // Execute all database operations
+      await Promise.all(batch);
+
+      // Refresh data to update counts and responses
+      const fetchLunchData = async () => {
+        // Reuse the logic from the useEffect but simplified
+        // Get all responses for today
+        const responsesQuery = query(
+          collection(db, "responses"),
+          where("date", "==", today)
+        );
+        const responseQuerySnap = await getDocs(responsesQuery);
+        const responsesList: Response[] = [];
+
+        responseQuerySnap.forEach((doc) => {
+          responsesList.push(doc.data() as Response);
+        });
+
+        setResponses(responsesList);
+
+        // Calculate counts
+        const yesCount = responsesList.filter(
+          (r) => r.response === "yes"
+        ).length;
+        const noCount = responsesList.filter((r) => r.response === "no").length;
+
+        setUserCount({
+          yes: yesCount,
+          no: noCount,
+          unanswered: users.length - yesCount - noCount,
+        });
+      };
+
+      await fetchLunchData();
+    } catch (error) {
+      console.error("Error submitting bulk responses:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <LunchContext.Provider
       value={{
@@ -297,6 +439,8 @@ export function LunchProvider({ children }: { children: ReactNode }) {
         userCount,
         submitResponse,
         toggleLunchAvailability,
+        toggleLateResponses,
+        submitBulkResponses,
       }}
     >
       {children}

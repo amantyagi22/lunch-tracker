@@ -17,6 +17,7 @@ export interface DailyLunch {
   available: boolean; // Set by admin (Jakir)
   unavailableReason?: string; // Optional explanation if lunch is unavailable
   cutoffTime: string; // Usually "12:30" but configurable
+  allowLateResponses: boolean; // Allow responses after cutoff time
   createdAt: Date | Timestamp;
 }
 
@@ -36,6 +37,7 @@ export interface AuthContextData {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  updateUser: (updates: Partial<User>) => Promise<void>;
 }
 
 // Context data for Lunch context
@@ -57,4 +59,6 @@ export interface LunchContextData {
     available: boolean,
     reason?: string
   ) => Promise<void>;
+  toggleLateResponses: (allowLate: boolean) => Promise<void>;
+  submitBulkResponses: (response: "yes" | "no") => Promise<void>;
 }

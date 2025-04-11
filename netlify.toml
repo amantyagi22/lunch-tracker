@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[functions]
+  directory = "netlify/functions"
+
+# Schedule the cutoff cron job to run at 12:30 PM on weekdays (M-F)
+[[scheduled-functions]]
+  function = "cutoff-cron"
+  schedule = "30 12 * * 1-5" 

@@ -13,7 +13,13 @@ import {
   onAuthStateChanged,
   signOut as firebaseSignOut,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import { AuthContextData, User } from "../types";
 
@@ -23,6 +29,7 @@ const AuthContext = createContext<AuthContextData>({
   loading: true,
   signInWithGoogle: async () => {},
   signOut: async () => {},
+  updateUser: async () => {},
 });
 
 // Auth provider component
@@ -98,8 +105,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Update user data function
+  const updateUser = async (updates: Partial<User>) => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const userRef = doc(db, "users", user.userId);
+
+      // Update in Firestore
+      await updateDoc(userRef, updates);
+
+      // Update local state
+      setUser((prevUser) => {
+        if (!prevUser) return null;
+        return {
+          ...prevUser,
+          ...updates,
+        };
+      });
+    } catch (error) {
+      console.error("Error updating user:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider
+      value={{ user, loading, signInWithGoogle, signOut, updateUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

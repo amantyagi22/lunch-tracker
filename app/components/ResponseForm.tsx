@@ -1,19 +1,47 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLunch } from "../contexts/LunchContext";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function ResponseForm() {
   const { dailyLunch, userResponse, loading, submitResponse } = useLunch();
-  const [setAsDefault, setSetAsDefault] = useState(false);
-  const { user } = useAuth();
+  const [isSettingDefault, setIsSettingDefault] = useState(false);
+  const { user, updateUser } = useAuth();
   const isAdmin = user?.isAdmin;
+  const userDefaultResponse = user?.defaultResponse;
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [updatedDefaultResponse, setUpdatedDefaultResponse] = useState<
+    "yes" | "no" | null
+  >(null);
+
+  // Store the latest response to use with the toggle
+  const [latestResponse, setLatestResponse] = useState<"yes" | "no" | null>(
+    userResponse?.response || null
+  );
+
+  // Update latestResponse when userResponse changes
+  useEffect(() => {
+    if (userResponse) {
+      setLatestResponse(userResponse.response);
+    }
+  }, [userResponse]);
+
+  // Hide feedback after 3 seconds
+  useEffect(() => {
+    if (showFeedback) {
+      const timer = setTimeout(() => {
+        setShowFeedback(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showFeedback]);
 
   // Check if current time is past cutoff
   const isPastCutoff = () => {
     if (!dailyLunch) return false;
     if (isAdmin) return false; // Admins can bypass cutoff time
+    if (dailyLunch.allowLateResponses) return false; // Allow late responses if enabled
 
     const now = new Date();
     const [hours, minutes] = dailyLunch.cutoffTime.split(":").map(Number);
@@ -24,12 +52,29 @@ export default function ResponseForm() {
   };
 
   const handleResponse = async (response: "yes" | "no") => {
-    await submitResponse(response, setAsDefault);
-    setSetAsDefault(false);
+    // Update the latest response
+    setLatestResponse(response);
+    await submitResponse(response, false);
   };
 
-  const handleToggleDefault = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSetAsDefault(e.target.checked);
+  const handleSetDefault = async () => {
+    if (isSettingDefault || !latestResponse) return; // Prevent multiple clicks or if no response
+
+    setIsSettingDefault(true);
+    try {
+      setUpdatedDefaultResponse(latestResponse);
+      setShowFeedback(true);
+
+      // Update user's default response
+      await updateUser({ defaultResponse: latestResponse });
+
+      // Also update in the backend
+      if (userResponse) {
+        await submitResponse(latestResponse, true);
+      }
+    } finally {
+      setIsSettingDefault(false);
+    }
   };
 
   if (!dailyLunch) {
@@ -72,7 +117,7 @@ export default function ResponseForm() {
             Responses were due by {dailyLunch.cutoffTime}.
             {userResponse ? (
               <span className="block mt-2 font-medium">
-                Your response:{" "}
+                Today&apos;s response:{" "}
                 <span
                   className={
                     userResponse.response === "yes"
@@ -100,7 +145,9 @@ export default function ResponseForm() {
         </h2>
         {userResponse ? (
           <div className="mt-2 sm:mt-3">
-            <span className="text-black font-medium">Current response: </span>
+            <span className="text-black font-medium">
+              Today&apos;s response:{" "}
+            </span>
             <span
               className={
                 userResponse.response === "yes"
@@ -190,41 +237,76 @@ export default function ResponseForm() {
 
       <div className="flex flex-col items-center justify-center bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200 max-w-md mx-auto mt-2">
         <div className="flex items-center justify-between w-full mb-3">
-          <div className="flex items-center">
-            <label
-              htmlFor="default-toggle"
-              className="text-sm font-medium text-gray-800 cursor-pointer"
-            >
-              Make this my default response
-            </label>
+          <div>
+            <p className="text-sm text-gray-800">
+              {userDefaultResponse ? (
+                <>
+                  Default :{" "}
+                  <span
+                    className={
+                      userDefaultResponse === "yes"
+                        ? "text-emerald-600 font-medium"
+                        : "text-rose-600 font-medium"
+                    }
+                  >
+                    {userDefaultResponse === "yes" ? "Yes" : "No"}
+                  </span>
+                </>
+              ) : (
+                "No default response set"
+              )}
+            </p>
           </div>
 
-          <div className="relative">
-            <input
-              type="checkbox"
-              id="default-toggle"
-              className="sr-only peer"
-              checked={setAsDefault}
-              onChange={handleToggleDefault}
-            />
-            <div
-              onClick={() => setSetAsDefault(!setAsDefault)}
-              className="w-14 h-7 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-300 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:shadow-sm after:transition-all peer-checked:bg-indigo-600 cursor-pointer"
-            ></div>
+          <div>
+            <button
+              onClick={handleSetDefault}
+              disabled={isSettingDefault || !userResponse}
+              className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+            >
+              {isSettingDefault ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1"></div>
+                  <span>Setting...</span>
+                </div>
+              ) : (
+                "Set as Default"
+              )}
+            </button>
           </div>
         </div>
+
+        {showFeedback && (
+          <div className="w-full mb-3 p-2 bg-green-100 text-green-800 rounded-md text-sm border border-green-200 animate-fadeIn text-center">
+            {updatedDefaultResponse ? (
+              <>
+                <span className="font-medium">Success!</span> Default response
+                updated to &quot;
+                {updatedDefaultResponse === "yes" ? "Yes" : "No"}
+                &quot;
+              </>
+            ) : (
+              <>
+                <span className="font-medium">Success!</span> Default response
+                cleared
+              </>
+            )}
+          </div>
+        )}
 
         <div className="w-full flex items-center justify-center text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
           <div className="flex items-center">
             <div className="relative mr-2">
               <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 text-indigo-700 w-5 h-5 text-xs font-medium cursor-pointer hover:bg-indigo-200 transition-colors">
                 ?
-                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-44 p-2 bg-white text-xs text-gray-700 rounded-md shadow-lg opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none border border-gray-200 z-10">
-                  This will be your automatic response for future days.
+                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-60 p-2 bg-white text-xs text-gray-700 rounded-md shadow-lg opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none border border-gray-200 z-10">
+                  Your default selection is automatically applied each day but
+                  can be overridden. If cutoff time passes without a response,
+                  your default choice will be used.
                 </span>
               </span>
             </div>
-            <p>Applies your choice automatically each day.</p>
+            <p>Automatically applies this choice to future days.</p>
           </div>
         </div>
       </div>

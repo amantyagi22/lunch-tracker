@@ -1,15 +1,31 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLunch } from "../contexts/LunchContext";
 import { useAuth } from "../contexts/AuthContext";
 import { Timestamp } from "firebase/firestore";
 
 export default function AdminPanel() {
   const { user } = useAuth();
-  const { dailyLunch, responses, userCount, toggleLunchAvailability } =
-    useLunch();
+  const {
+    dailyLunch,
+    responses,
+    userCount,
+    toggleLunchAvailability,
+    toggleLateResponses,
+  } = useLunch();
   const [reason, setReason] = useState("");
+  const [allowLate, setAllowLate] = useState(false);
+
+  useEffect(() => {
+    if (dailyLunch) {
+      if (dailyLunch.unavailableReason) {
+        setReason(dailyLunch.unavailableReason);
+      }
+
+      setAllowLate(Boolean(dailyLunch.allowLateResponses));
+    }
+  }, [dailyLunch]);
 
   // If user is not an admin, don't show this component
   if (!user?.isAdmin) return null;
@@ -35,6 +51,12 @@ export default function AdminPanel() {
     }
   };
 
+  const handleLateResponsesToggle = async () => {
+    const newValue = !allowLate;
+    setAllowLate(newValue);
+    await toggleLateResponses(newValue);
+  };
+
   // Sort responses by updated time (most recent first)
   const sortedResponses = [...responses].sort((a, b) => {
     const getTime = (timestamp: Date | Timestamp) => {
@@ -56,6 +78,20 @@ export default function AdminPanel() {
     );
   }
 
+  // Check if current time is past cutoff
+  const isPastCutoff = () => {
+    if (!dailyLunch) return false;
+
+    const now = new Date();
+    const [hours, minutes] = dailyLunch.cutoffTime.split(":").map(Number);
+    const cutoffTime = new Date();
+    cutoffTime.setHours(hours, minutes, 0, 0);
+
+    return now > cutoffTime;
+  };
+
+  const pastCutoff = isPastCutoff();
+
   return (
     <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
       <h2 className="text-lg font-medium text-gray-900 mb-3 sm:mb-4">
@@ -74,7 +110,7 @@ export default function AdminPanel() {
               onChange={handleToggle}
               className="sr-only peer"
             />
-            <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300/30 rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
             <span className="ml-3 text-sm font-medium text-gray-700">
               {dailyLunch.available ? "Available" : "Not Available"}
             </span>
@@ -93,6 +129,37 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+
+      {pastCutoff && (
+        <div className="mb-4 sm:mb-6 bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+          <div className="flex flex-row items-center justify-between gap-2">
+            <div className="flex-shrink min-w-0">
+              <div className="flex items-center gap-1">
+                <h3 className="text-sm font-medium text-indigo-800 whitespace-nowrap">
+                  Late Responses
+                </h3>
+                <p className="text-xs text-indigo-600 whitespace-nowrap">
+                  ({dailyLunch.cutoffTime})
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center flex-shrink-0">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={allowLate}
+                  onChange={handleLateResponsesToggle}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300/30 rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
+                <span className="ml-2 text-xs font-medium text-indigo-700 whitespace-nowrap">
+                  {allowLate ? "Allowed" : "Closed"}
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mb-4 sm:mb-6">
         <h3 className="text-sm font-medium text-gray-700 mb-2">
@@ -142,7 +209,7 @@ export default function AdminPanel() {
                     className="hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm font-medium text-black">
-                      {response.userName || response.userId}
+                      {response.userName ? response.userName : "Unknown User"}
                     </td>
                     <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm">
                       <span
