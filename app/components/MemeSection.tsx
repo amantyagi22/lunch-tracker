@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 // Default subreddit if the environment variable is not set
-const DEFAULT_SUBREDDIT = "wholesomememes";
+const DEFAULT_SUBREDDIT = "aww"; // Extra safe default in case env variables fail
 // Get subreddit from environment variable or use default
 const MEME_SUBREDDIT =
   process.env.NEXT_PUBLIC_MEME_SUBREDDIT || DEFAULT_SUBREDDIT;
@@ -25,6 +25,7 @@ const fallbackMeme = {
 
 // Simple profanity filter for meme titles
 const containsProfanity = (text: string): boolean => {
+  // Common profanity
   const profanityList = [
     "fuck",
     "shit",
@@ -46,13 +47,55 @@ const containsProfanity = (text: string): boolean => {
     "xxx",
   ];
 
+  // Religious/cultural sensitive terms that could lead to offensive content
+  const sensitiveTerms = [
+    "hindu",
+    "muslim",
+    "islam",
+    "christian",
+    "jew",
+    "sikh",
+    "buddhist",
+    "religion",
+    "religious",
+    "church",
+    "mosque",
+    "temple",
+    "prayer",
+    "allah",
+    "jesus",
+    "god",
+    "christ",
+    "ram",
+    "krishna",
+    "mohammed",
+    "prophet",
+    "bible",
+    "quran",
+    "gita",
+    "racial",
+    "stereotype",
+    "caste",
+    "brahmin",
+    "dalit",
+    "racist",
+  ];
+
   const lowerText = text.toLowerCase();
-  return profanityList.some(
+
+  // Check for profanity
+  const hasProfanity = profanityList.some(
     (word) =>
       lowerText.includes(word) ||
-      // Check for variants with special characters
       lowerText.replace(/[^\w\s]/g, "").includes(word)
   );
+
+  // Check for sensitive religious/cultural terms
+  const hasSensitiveTerms = sensitiveTerms.some((term) =>
+    lowerText.includes(term)
+  );
+
+  return hasProfanity || hasSensitiveTerms;
 };
 
 export default function MemeSection() {

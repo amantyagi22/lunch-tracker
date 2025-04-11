@@ -45,7 +45,8 @@ A simple web application for tracking lunch participants in a group setting.
 ### Optional
 
 - `NEXT_PUBLIC_MEME_SUBREDDIT`: Reddit subreddit to fetch memes from (default: "wholesomememes")
-  - Change this to any appropriate subreddit you prefer (e.g., "foodmemes", "programminghumor")
+  - Change this to any work-appropriate subreddit (e.g., "aww", "dadjokes", "foodmemes")
+  - Safe options include: wholesomememes, aww, foodmemes, programmerhumor, dadjokes, kitchenmemes
 
 ## Usage
 
