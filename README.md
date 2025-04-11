@@ -1,82 +1,67 @@
-# Lunch Tracker
+# Lunch Group Tracker
 
-A simple web application for tracking lunch preferences in an office setting.
+A simple web application for tracking lunch participants in a group setting.
 
 ## Features
 
-- **Google OAuth Authentication**: One-click sign in
-- **Simple User Interface**: Easily respond "Yes" or "No" to daily lunch
-- **Default Preferences**: Set your common lunch preference to minimize daily input
-- **Admin Panel**: For the office manager to track attendance and manage lunch availability
-- **Mobile-Friendly**: Works well on all devices
+- Track daily lunch responses (Yes/No)
+- Set default responses for users
+- Admin panel for managing lunch availability
+- Cutoff time enforcement
+- Late response handling
+- Holiday/unavailability settings
+- Daily memes for entertainment (configurable subreddit)
 
-## Tech Stack
+## Getting Started
 
-- **Frontend**: React.js with Next.js, Tailwind CSS
-- **Backend**: Firebase (Authentication & Firestore Database)
-- **Hosting**: Vercel (recommended)
+### Prerequisites
 
-## Setup Instructions
+- Node.js 16+
+- npm or yarn
+- Firebase account
 
-1. **Clone the repository**
+### Installation
 
-```bash
-git clone <repository-url>
-cd lunch-tracker
-```
+1. Clone the repository
+2. Install dependencies
+   ```
+   npm install
+   ```
+3. Copy `.env.example` to `.env.local` and update with your Firebase credentials
+4. Run the development server
+   ```
+   npm run dev
+   ```
 
-2. **Install dependencies**
+## Environment Variables
 
-```bash
-npm install
-```
+### Required
 
-3. **Create a Firebase project**
+- `NEXT_PUBLIC_FIREBASE_API_KEY`: Your Firebase API key
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`: Your Firebase Auth Domain
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`: Your Firebase Project ID
+- Other Firebase configuration variables
 
-- Go to [Firebase Console](https://console.firebase.google.com/)
-- Create a new project
-- Set up Authentication with Google provider
-- Create a Firestore database
+### Optional
 
-4. **Configure environment variables**
+- `NEXT_PUBLIC_MEME_SUBREDDIT`: Reddit subreddit to fetch memes from (default: "wholesomememes")
+  - Change this to any appropriate subreddit you prefer (e.g., "foodmemes", "programminghumor")
 
-Create a `.env.local` file in the project root with your Firebase configuration:
+## Usage
 
-```
-NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
-NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your-measurement-id
-```
+### User Features
 
-5. **Run the development server**
+- Sign in with Google
+- Respond "Yes" or "No" for daily lunch
+- Set default responses
+- View current day's status
 
-```bash
-npm run dev
-```
+### Admin Features
 
-6. **Open [http://localhost:3000](http://localhost:3000) with your browser**
-
-## Setting Admin Privileges
-
-By default, all users are created with `isAdmin: false`. To make a user an admin (Jakir):
-
-1. Sign in as the user you want to make an admin
-2. Go to Firebase Console > Firestore Database
-3. Find the user document in the "users" collection
-4. Update the `isAdmin` field to `true`
-
-## Deployment
-
-The easiest way to deploy this application is using Vercel:
-
-1. Push your code to a GitHub repository
-2. Import the project to Vercel
-3. Configure the environment variables
-4. Deploy
+- Toggle lunch availability
+- Set reason for unavailability
+- Toggle late response acceptance
+- View all user responses
 
 ## License
 

@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from "react";
 
+// Default subreddit if the environment variable is not set
+const DEFAULT_SUBREDDIT = "wholesomememes";
+// Get subreddit from environment variable or use default
+const MEME_SUBREDDIT =
+  process.env.NEXT_PUBLIC_MEME_SUBREDDIT || DEFAULT_SUBREDDIT;
+
 interface Meme {
   postLink: string;
   title: string;
@@ -73,7 +79,7 @@ export default function MemeSection() {
           const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
           const response = await fetch(
-            "https://meme-api.com/gimme/IndianDankMemes",
+            `https://meme-api.com/gimme/${MEME_SUBREDDIT}`,
             {
               signal: controller.signal,
             }
@@ -200,6 +206,9 @@ export default function MemeSection() {
                 </a>
               </div>
             )}
+            <div className="text-right text-xs text-gray-500">
+              From r/{MEME_SUBREDDIT}
+            </div>
           </div>
         ) : (
           <div className="text-center text-gray-500 py-10">
