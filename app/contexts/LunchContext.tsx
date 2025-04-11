@@ -67,9 +67,35 @@ export function LunchProvider({ children }: { children: ReactNode }) {
         // If lunch doesn't exist for today, create it (Mon-Fri only)
         const dayOfWeek = new Date().getDay();
         if (!lunchSnap.exists() && dayOfWeek > 0 && dayOfWeek < 6) {
+          // Check previous day's lunch status to handle holidays
+          const yesterday = formatDate(
+            new Date(new Date().setDate(new Date().getDate() - 1))
+          );
+          const yesterdayRef = doc(db, "dailyLunch", yesterday);
+          const yesterdaySnap = await getDoc(yesterdayRef);
+
+          // Default values
+          let available = true;
+          let unavailableReason = null;
+
+          // If previous day exists and was marked unavailable with a reason,
+          // carry over the unavailable state for holidays
+          if (yesterdaySnap.exists()) {
+            const yesterdayData = yesterdaySnap.data();
+            if (
+              !yesterdayData.available &&
+              yesterdayData.unavailableReason &&
+              yesterdayData.unavailableReason.toLowerCase().includes("holiday")
+            ) {
+              available = false;
+              unavailableReason = yesterdayData.unavailableReason;
+            }
+          }
+
           const newLunch: DailyLunch = {
             date: today,
-            available: true,
+            available: available,
+            unavailableReason: unavailableReason,
             cutoffTime: "12:30",
             allowLateResponses: false, // By default, don't allow late responses
             createdAt: new Date(),
@@ -275,11 +301,22 @@ export function LunchProvider({ children }: { children: ReactNode }) {
       const today = formatDate(new Date());
       const lunchRef = doc(db, "dailyLunch", today);
 
-      await updateDoc(lunchRef, {
+      // Update in the database, using null to clear fields in Firestore
+      const updateData: {
+        available: boolean;
+        unavailableReason?: string | null;
+      } = {
         available,
-        unavailableReason: reason || null,
-      });
+      };
 
+      // Only set the reason field if it's provided or explicitly set to undefined
+      if (reason !== undefined) {
+        updateData.unavailableReason = reason || null;
+      }
+
+      await updateDoc(lunchRef, updateData);
+
+      // Update local state
       setDailyLunch((prev) =>
         prev
           ? {

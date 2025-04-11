@@ -21,6 +21,8 @@ export default function AdminPanel() {
     if (dailyLunch) {
       if (dailyLunch.unavailableReason) {
         setReason(dailyLunch.unavailableReason);
+      } else {
+        setReason("");
       }
 
       setAllowLate(Boolean(dailyLunch.allowLateResponses));
@@ -51,6 +53,12 @@ export default function AdminPanel() {
     }
   };
 
+  const handleUpdateReason = async () => {
+    // Pass undefined when reason is empty to properly clear it
+    const reasonToSet = reason.trim() === "" ? undefined : reason;
+    await toggleLunchAvailability(false, reasonToSet);
+  };
+
   const handleLateResponsesToggle = async () => {
     const newValue = !allowLate;
     setAllowLate(newValue);
@@ -70,9 +78,17 @@ export default function AdminPanel() {
   const isWeekend = [0, 6].includes(new Date().getDay());
   if (isWeekend) {
     return (
-      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <div className="text-center text-gray-500">
-          Admin panel is only available on weekdays.
+      <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+        <div className="text-center text-blue-800">
+          <h3 className="text-lg font-medium">
+            Weekend - Admin Panel Not Available
+          </h3>
+          <p className="mt-2">
+            The admin panel is only active on weekdays (Monday-Friday).
+          </p>
+          <p className="mt-3 text-sm text-blue-600">
+            You can check back on Monday to manage lunch responses.
+          </p>
         </div>
       </div>
     );
@@ -118,14 +134,40 @@ export default function AdminPanel() {
         </div>
 
         {!dailyLunch.available && (
-          <div className="mt-2">
-            <input
-              type="text"
-              value={reason || dailyLunch.unavailableReason || ""}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Reason for unavailability (optional)"
-              className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-500 transition-colors"
-            />
+          <div className="mt-2 space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Reason for unavailability (optional)"
+                className="flex-1 p-2 border border-gray-300 rounded-md text-sm text-black focus:ring-2 focus:ring-blue-300 focus:border-blue-500 transition-colors"
+              />
+              <button
+                onClick={handleUpdateReason}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 transition-colors"
+              >
+                Update
+              </button>
+            </div>
+            <div className="text-xs text-blue-600 flex items-start">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>
+                Tip: Include the word &quot;holiday&quot; in your reason to
+                automatically apply this setting to upcoming days until changed.
+              </span>
+            </div>
           </div>
         )}
       </div>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useLunch } from "../contexts/LunchContext";
 import { useAuth } from "../contexts/AuthContext";
+import MemeSection from "./MemeSection";
 
 export default function ResponseForm() {
   const { dailyLunch, userResponse, loading, submitResponse } = useLunch();
@@ -101,8 +102,50 @@ export default function ResponseForm() {
   const isWeekend = [0, 6].includes(new Date().getDay());
   if (isWeekend) {
     return (
-      <div className="p-6 text-center text-gray-500">
-        Lunch tracking is only available on weekdays.
+      <div>
+        <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+          <div className="text-center text-blue-800">
+            <h3 className="text-lg font-medium">Weekend - No Lunch Tracking</h3>
+            <p className="mt-2">
+              Lunch tracking is only available on weekdays (Monday-Friday).
+              {userResponse ? (
+                <span className="block mt-2 font-medium">
+                  Your last response was:{" "}
+                  <span
+                    className={
+                      userResponse.response === "yes"
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                    }
+                  >
+                    {userResponse.response === "yes" ? "Yes" : "No"}
+                  </span>
+                </span>
+              ) : userDefaultResponse ? (
+                <span className="block mt-2 font-medium">
+                  Your default response is:{" "}
+                  <span
+                    className={
+                      userDefaultResponse === "yes"
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                    }
+                  >
+                    {userDefaultResponse === "yes" ? "Yes" : "No"}
+                  </span>
+                </span>
+              ) : null}
+            </p>
+            <p className="mt-3 text-sm text-blue-600">
+              Please check back on Monday to submit your lunch preferences.
+            </p>
+          </div>
+        </div>
+
+        {/* Add meme section for entertainment on weekends */}
+        <div className="mt-4">
+          <MemeSection />
+        </div>
       </div>
     );
   }
@@ -110,28 +153,35 @@ export default function ResponseForm() {
   const pastCutoff = isPastCutoff();
   if (pastCutoff && !isAdmin) {
     return (
-      <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-        <div className="text-center text-gray-600">
-          <h3 className="text-lg font-medium">Cutoff time has passed</h3>
-          <p className="mt-2">
-            Responses were due by {dailyLunch.cutoffTime}.
-            {userResponse ? (
-              <span className="block mt-2 font-medium">
-                Today&apos;s response:{" "}
-                <span
-                  className={
-                    userResponse.response === "yes"
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }
-                >
-                  {userResponse.response === "yes" ? "Yes" : "No"}
+      <div>
+        <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+          <div className="text-center text-gray-600">
+            <h3 className="text-lg font-medium">Cutoff time has passed</h3>
+            <p className="mt-2">
+              Responses were due by {dailyLunch.cutoffTime}.
+              {userResponse ? (
+                <span className="block mt-2 font-medium">
+                  Today&apos;s response:{" "}
+                  <span
+                    className={
+                      userResponse.response === "yes"
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                    }
+                  >
+                    {userResponse.response === "yes" ? "Yes" : "No"}
+                  </span>
                 </span>
-              </span>
-            ) : (
-              <span className="block mt-2">You did not respond today.</span>
-            )}
-          </p>
+              ) : (
+                <span className="block mt-2">You did not respond today.</span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Add meme section for entertainment after cutoff */}
+        <div className="mt-4">
+          <MemeSection />
         </div>
       </div>
     );
@@ -310,6 +360,13 @@ export default function ResponseForm() {
           </div>
         </div>
       </div>
+
+      {/* Always show the meme section for regular users */}
+      {!isAdmin && (
+        <div className="mt-4">
+          <MemeSection />
+        </div>
+      )}
     </div>
   );
 }
